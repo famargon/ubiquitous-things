@@ -1,0 +1,30 @@
+{
+  "name": "ubiquitous-things",
+  "version": "1.0.0",
+  "description": "framework to create ubiquitous computing apps",
+  "main": "thing.js",
+  "dependencies": {
+    "ip": "^1.1.4",
+    "lodash": "^4.17.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/famargon/ubiquitous-things.git"
+  },
+  "keywords": [
+    "ubiquitous",
+    "computing",
+    "iot",
+    "things"
+  ],
+  "author": "Fabián Martínez González",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/famargon/ubiquitous-things/issues"
+  },
+  "homepage": "https://github.com/famargon/ubiquitous-things#readme"
+}

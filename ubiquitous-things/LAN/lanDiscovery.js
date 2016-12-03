@@ -1,14 +1,12 @@
 "use strict";
 
 const dgram = require('dgram');
-const os = require("os");
 const ip = require('ip');
 const net = require("net");
 const context = require("../core/thingContext.js")
 const things = require("../core/knownThings.js");
+const lanUtils = require("./lanUtils.js")
 
-
-//message send to meet things
 var strGreeting;
 var listeningPort; 
 var interchangesPort;
@@ -25,15 +23,7 @@ exports.init = function(interPort,greetings,greetingsPort){
     listeningPort = greetingsPort;
     strGreeting = greetings;
     bufferGreeting = new Buffer(strGreeting);
-    const interfaces = os.networkInterfaces();
-    for (var k in interfaces) {
-        for (var k2 in interfaces[k]) {
-            var address = interfaces[k][k2];
-            if (address.family === 'IPv4' && !address.internal) {
-                addresses.push({"addr":address.address,"netmask":address.netmask});
-            }
-        }
-    }
+    addresses = lanUtils.getAddresses();
     subnet = ip.subnet(addresses[0].addr, addresses[0].netmask);
     broadcastAddress = subnet.broadcastAddress;
     initMeetingsServer();
@@ -64,8 +54,8 @@ function initMeetingsServer(){
     server.on("message",(msg, rinfo) => {
         console.log(`server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
         //dont let to meet yourself
-        if(rinfo.address!=addresses[0].addr && msg.toString()===strGreeting){
-//       if(msg.toString()===strGreeting){
+//        if(rinfo.address!=addresses[0].addr && msg.toString()===strGreeting){
+        if(msg.toString()===strGreeting){
             sendAndGetContext(rinfo.address);
         }
     });
@@ -74,10 +64,10 @@ function initMeetingsServer(){
 //interchange of contexts
 function sendAndGetContext(addr,port){
     var client = net.connect({port: interchangesPort,host:addr}, () => {
-    // 'connect' listener
-    console.log('connected to server!');
-    thingContext = context.thingContext.getInstance().getContext();
-    client.write(JSON.stringify(thingContext));
+        // 'connect' listener
+        console.log('connected to server!');
+        thingContext = context.thingContext.getInstance().getContext();
+        client.write(JSON.stringify(thingContext));
     });
     client.on('data', (data) => {
         console.log("Thing received in LAN client");

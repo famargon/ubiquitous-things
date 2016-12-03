@@ -1,5 +1,6 @@
 "use strict";
 
+
 //Singleton pattern for things context
 exports.thingContext = (function () {
  
@@ -11,13 +12,24 @@ exports.thingContext = (function () {
     // Singleton
  
     // Private methods and variables
-    var context = {"id":"context test"}
-
+    const properties = require("./properties.js");
+    var propObj = properties.getProperties();
+    var addrs = [{addr:-1}]
+    if(propObj.lanMode){
+      const lanUtils  = require("../LAN/lanUtils.js");
+      addrs = lanUtils.getAddresses();
+    }
+    var context = {
+      id: "ubi"+propObj.appName+Math.floor(Math.random() * 100) + 1,
+      lanMode: propObj.lanMode, 
+      addr: addrs[0].addr 
+    }
+        
  
     return {
  
       // Public methods and variables
-      contextVersion: "0",
+      contextVersion: propObj.contextVersion,
 
       getContext: function(){
           return context;

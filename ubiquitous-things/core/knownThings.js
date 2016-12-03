@@ -2,7 +2,7 @@
 
 var array = require('lodash/array');
 
-//Singleton pattern for things context
+//Singleton pattern for the list of known things
 exports.list = (function () {
  
   // Instance stores a reference to the Singleton
@@ -40,6 +40,15 @@ exports.list = (function () {
           }
           
           return thing;
+      },
+
+      delete: function(id){
+          var index = array.findIndex(list,function(obj){
+              return obj.id === thing.id;
+          });
+          if(index>-1){
+            list.splice(index,1);
+          }
       }
  
     };

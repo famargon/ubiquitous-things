@@ -15,7 +15,9 @@ exports.init = function(interchangesPort){
             var newThing = JSON.parse(data);
             console.log(newThing)
             if(newThing.id!=undefined){
+                //add as a known thing saving it's context
                 things.list.getInstance().saveOrUpdateThing(newThing);
+                //reply with our own context
                 thingContext = context.thingContext.getInstance().getContext();
                 socket.write(JSON.stringify(thingContext));
                 socket.pipe(socket);
