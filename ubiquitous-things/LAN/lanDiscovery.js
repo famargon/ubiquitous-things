@@ -55,7 +55,7 @@ function initMeetingsServer(){
     server.on("message",(msg, source) => {
         console.log(`server got: ${msg} from ${source.address}:${source.port}`);
         //dont let to meet yourself
-        if(rinfo.address!=addresses[0].addr && msg.toString()===strGreeting){
+        if(source.address!=addresses[0].addr && msg.toString()===strGreeting){
 //        if(msg.toString()===strGreeting){
             sendAndGetContext(source.address);
         }
