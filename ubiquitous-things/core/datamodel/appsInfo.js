@@ -22,6 +22,7 @@ exports.list = (function () {
       // Public methods and variables
       addAppInfo: function(obj){
           list.push(obj);
+          console.log("app info added!!!")
       },
       //returns the oldest job or app info and delete it form the list
       getFirstAppInfo: function(){

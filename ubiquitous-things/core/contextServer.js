@@ -1,8 +1,8 @@
 "use strict";
 
 const net = require("net");
-const context = require("./thingContext.js")
-const things = require("./knownThings.js");
+const context = require("./datamodel/thingContext.js")
+const things = require("./datamodel/knownThings.js");
 
 var thingContext;
 
