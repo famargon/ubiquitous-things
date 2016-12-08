@@ -33,11 +33,11 @@ exports.init = function(interPort,greetings,greetingsPort){
 exports.sendGreetings = function(){
     var client = dgram.createSocket("udp4");
 
-    client.bind();
+    client.bind({address: 'localhost'});
     client.on("listening", function () {
         client.setBroadcast(true);
         console.log("-----------------");
-        console.log("sending greetings");
+        console.log("sending greetings bc addr "+broadcastAddress);
         client.send(bufferGreeting, 0, bufferGreeting.length, meetingsPort, broadcastAddress, function(err, bytes) {
             console.log("closing greetings")
         });
@@ -54,6 +54,7 @@ function initMeetingsServer(){
     });
     server.on("message",(msg, source) => {
         //dont let to meet yourself
+        console.log(`test addr ${source.address}:${source.port}`);
         if(source.address!=addresses[0].addr && msg.toString()===strGreeting){
 //        if(msg.toString()===strGreeting){
             console.log(`server got: ${msg} from ${source.address}:${source.port}`);
