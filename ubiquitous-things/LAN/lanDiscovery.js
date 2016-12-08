@@ -132,7 +132,6 @@ var sendHeartBeat = function(destinationContext){
     });
     client.on('end', () => {
         console.log('disconnected from server');
-        client.close()
         client.destroy()
     });
     client.on("error",()=>{
