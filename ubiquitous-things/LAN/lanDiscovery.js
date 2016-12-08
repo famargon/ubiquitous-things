@@ -15,6 +15,7 @@ var addresses = [];
 var subnet;
 var broadcastAddress;
 var bufferGreeting;
+var hbPort = "9898";
 
 //first called from core
 exports.init = function(interPort,greetings,greetingsPort){
@@ -27,13 +28,14 @@ exports.init = function(interPort,greetings,greetingsPort){
     subnet = ip.subnet(addresses[0].addr, addresses[0].netmask);
     broadcastAddress = subnet.broadcastAddress;
     initMeetingsServer();
+    initHeartBeatServer();
     startCheckHeartBeat();
 }
 
 exports.sendGreetings = function(){
     var client = dgram.createSocket("udp4");
 
-    client.bind({address: 'localhost'});
+    client.bind({address: addresses[0].addr});
     client.on("listening", function () {
         client.setBroadcast(true);
         console.log("-----------------");
@@ -60,6 +62,19 @@ function initMeetingsServer(){
             console.log(`server got: ${msg} from ${source.address}:${source.port}`);
             sendAndGetContext(source.address);
         }
+    });
+}
+function initHeartBeatServer(){
+    var heartBeatServer = net.createServer((socket)=>{
+        socket.on('data', function(data) {
+            thingContext = context.thingContext.getInstance().getContext();
+            socket.write(JSON.stringify(thingContext));
+            socket.pipe(socket);
+            socket.end();
+        });
+    });
+    heartBeatServer.listen(hbPort,()=>{
+        console.log("HeartBeat Server bound");
     });
 }
 
@@ -100,19 +115,28 @@ function startCheckHeartBeat(){
 }
 
 var sendHeartBeat = function(destinationContext){
-    var client = dgram.createSocket("udp4");
-    console.log("destination context")
-    console.log(JSON.stringify(destinationContext))
-    client.bind();
-    client.on("listening", function () {
-        console.log("-----------------");
-        console.log("sending heartbeat");
-        client.send(bufferGreeting, 0, bufferGreeting.length, meetingsPort, destinationContext.addr);
+    //send to its heartbeat server
+    var client = net.connect({port: hbPort,host:destinationContext.addr}, () => {
+        // 'connect' listener
+        console.log('connected to server!');
+        //we send our own context
+        thingContext = context.thingContext.getInstance().getContext();
+        client.write("Are u alive??");
     });
-    client.on('end',()=>{
-        console.log("closing heartbeat");
+    client.on('data', (data) => {
+        console.log(JSON.parse(data));
+        console.log("----------------------------");
+        //we receive its context
+        colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
+        client.end();
     });
-    client.on('error',()=>{
+    client.on('end', () => {
+        console.log('disconnected from server');
+        client.close()
+        client.destroy()
+    });
+    client.on("error",()=>{
+        console.log("Error on heartbeat");
         colleages.list.getInstance().delete(destinationContext.id)
     });
 }
