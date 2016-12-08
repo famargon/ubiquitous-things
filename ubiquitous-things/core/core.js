@@ -11,6 +11,7 @@ var appsInfo = require("./datamodel/appsInfo.js")
 var contextServerPort = "9999";
 var strGreeting = "IMATHING";
 var greetingsPort = "8888";
+var hbPort = "9898";
 var jobsPort = "8069"; //listen port to receive jobs or exange applications information, its responsibility of the apps using this framework to be able to understand the json objects received in this port
 var thingContext = context.thingContext.getInstance().getContext();
 
@@ -22,7 +23,7 @@ exports.init = function(){
     contextServer.init(contextServerPort);
     jobsServer.init(jobsPort);
     if(propObj.lanMode){
-        lanDiscovery.init(contextServerPort,strGreeting,greetingsPort);
+        lanDiscovery.init(contextServerPort,strGreeting,greetingsPort,hbPort);
         lanDiscovery.sendGreetings();
     }
 }

@@ -36,18 +36,18 @@ exports.list = (function () {
               //update
               list[index] = thing;
               console.log("thing UPDATED from list of things!!")
+              return 0;
           }else{
               //save 
               list.push(thing);
               console.log("thing added to list of things!!")
+              return 5000;
           }
-          
-          return thing;
       },
 
       delete: function(id){
           var index = array.findIndex(list,function(obj){
-              return obj.id === thing.id;
+              return obj.id === id;
           });
           if(index>-1){
             list.splice(index,1);

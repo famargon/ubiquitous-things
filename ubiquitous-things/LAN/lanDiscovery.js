@@ -15,13 +15,14 @@ var addresses = [];
 var subnet;
 var broadcastAddress;
 var bufferGreeting;
-var hbPort = "9898";
+var hbPort;
 
 //first called from core
-exports.init = function(interPort,greetings,greetingsPort){
+exports.init = function(interPort,greetings,greetingsPort,heartBPort){
     console.log("Lan discovery initialized")
     contextServerPort = interPort;
     meetingsPort = greetingsPort;
+    hbPort = heartBPort;
     strGreeting = greetings;
     bufferGreeting = new Buffer(strGreeting);
     addresses = lanUtils.getAddresses();
@@ -94,7 +95,7 @@ function sendAndGetContext(addr){
         console.log(JSON.parse(data));
         console.log("----------------------------");
         //we receive its context
-        colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
+        timing += colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
         client.end();
     });
     client.on('end', () => {
@@ -103,29 +104,26 @@ function sendAndGetContext(addr){
 }
 
 //heartbeat
-function startCheckHeartBeat(){
-    setInterval(function(){
-        var list =colleages.list.getInstance().getAll()
-        for(var pos in list){
-            console.log("start heartbeat "+list[pos])
-            sendHeartBeat(list[pos])
-            console.log("end heartbeat")
-        }
-    },10000)
+var timing = 5000;
+function startCheckHeartBeat(){    
+    checkHB();
 }
-
+function checkHB(){
+    var list =colleages.list.getInstance().getAll()
+    for(var pos in list){
+        console.log("start heartbeat "+JSON.stringify(list[pos]))
+        sendHeartBeat(list[pos])
+        console.log("end heartbeat")
+    } 
+    setTimeout(checkHB,timing)
+}
 var sendHeartBeat = function(destinationContext){
     //send to its heartbeat server
     var client = net.connect({port: hbPort,host:destinationContext.addr}, () => {
-        // 'connect' listener
-        console.log('connected to server!');
-        //we send our own context
-        thingContext = context.thingContext.getInstance().getContext();
         client.write("Are u alive??");
     });
     client.on('data', (data) => {
         console.log(JSON.parse(data));
-        console.log("----------------------------");
         //we receive its context
         colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
         client.end();
@@ -135,7 +133,8 @@ var sendHeartBeat = function(destinationContext){
         client.destroy()
     });
     client.on("error",()=>{
-        console.log("Error on heartbeat");
+        console.log("Error on heartbeat, deleted friend "+destinationContext.id);
         colleages.list.getInstance().delete(destinationContext.id)
+        timing -= 5000;
     });
 }
