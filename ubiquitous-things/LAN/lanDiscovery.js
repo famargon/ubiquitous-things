@@ -53,10 +53,10 @@ function initMeetingsServer(){
         console.log("Greetings Server bound")
     });
     server.on("message",(msg, source) => {
-        console.log(`server got: ${msg} from ${source.address}:${source.port}`);
         //dont let to meet yourself
         if(source.address!=addresses[0].addr && msg.toString()===strGreeting){
 //        if(msg.toString()===strGreeting){
+            console.log(`server got: ${msg} from ${source.address}:${source.port}`);
             sendAndGetContext(source.address);
         }
     });
@@ -77,7 +77,7 @@ function sendAndGetContext(addr){
         console.log("Thing received in LAN client");
         console.log(JSON.parse(data));
         console.log("----------------------------");
-        //we receive its own context
+        //we receive its context
         colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
         client.end();
     });

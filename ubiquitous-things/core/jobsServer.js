@@ -25,12 +25,14 @@ exports.init = function(port){
 
 //sendTo is the context of the destination thing
 exports.sendAppInfo = function(sendTo,jsonAppInfo){
-    var client = net.connect({port: jobsPort,host:sendTo.addr}, () => {
-        // 'connect' listener
-        console.log('connected to jobs server!')
-        client.write(JSON.stringify(jsonAppInfo))
-    });
-    client.on('end', () => {
-        console.log('disconnected from jobs server');
-    });
+    if(sendTo!=undefined){
+        var client = net.connect({port: jobsPort,host:sendTo.addr}, () => {
+            // 'connect' listener
+            console.log('connected to jobs server!')
+            client.write(JSON.stringify(jsonAppInfo))
+        });
+        client.on('end', () => {
+            console.log('disconnected from jobs server');
+        });
+    }
 }

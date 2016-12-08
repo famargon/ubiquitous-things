@@ -9,7 +9,7 @@ exports.getKnownThingById = function(thingId){
 }
 //returns a list with the context of all known things
 exports.getAllKnownThings = function(){
-    return colleages.list.getInstance.getAll()
+    return colleages.list.getInstance().getAll()
 }
 
 //destination context of destination app, recommended to get this context with knownThings.getThing

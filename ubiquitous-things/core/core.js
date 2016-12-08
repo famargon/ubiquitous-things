@@ -18,6 +18,7 @@ var thingContext = context.thingContext.getInstance();
 var propObj = properties.getProperties();
 
 exports.init = function(){
+    console.log("my id is " + JSON.stringify(thingContext))    
     contextServer.init(contextServerPort);
     jobsServer.init(jobsPort);
     if(propObj.lanMode){
@@ -35,13 +36,6 @@ exports.getFirstAppInfo = function(){
 exports.getLastAppInfo = function(){
     return appsInfo.list.getInstance().getLastAppInfo();
 }
-//jobs test
 
-setInterval(function(){
-    var dest = context.thingContext.getInstance();
-    var data = {test:"test data of a json job"};
-    console.log("sending job")
-    jobsServer.sendAppInfo(dest,data);
-},5000);
 
 
