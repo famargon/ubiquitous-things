@@ -12,7 +12,7 @@ var contextServerPort = "9999";
 var strGreeting = "IMATHING";
 var greetingsPort = "8888";
 var jobsPort = "8069"; //listen port to receive jobs or exange applications information, its responsibility of the apps using this framework to be able to understand the json objects received in this port
-var thingContext = context.thingContext.getInstance();
+var thingContext = context.thingContext.getInstance().getContext();
 
 //properties, should be configured via .properties or something
 var propObj = properties.getProperties();
