@@ -107,7 +107,7 @@ function sendAndGetContext(addr){
             console.log('client connected',socket.authorized ? 'authorized' : 'unauthorized');
             if(socket.authorized){
                 thingContext = context.thingContext.getInstance().getContext();
-                client.write(JSON.stringify(thingContext));
+                socket.write(JSON.stringify(thingContext));
             }
         });
         socket.on('data', (data) => {
