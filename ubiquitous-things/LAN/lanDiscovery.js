@@ -139,7 +139,7 @@ function initMeetingsServer(){
             //dont let to meet yourself
             //if(source.address!=addresses[0].addr && msg.length==32){
             if(msg.length==65){
-                sendHandShake(source.address,other_pk)
+                sendHandShake(source.address,msg)
             }
         });
     }else{
