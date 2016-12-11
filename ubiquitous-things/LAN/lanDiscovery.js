@@ -64,6 +64,7 @@ exports.init = function(interPort,greetings,greetingsPort,heartBPort,hsPort,secu
     if(secure){
         initialHandshake = crypto.createECDH('secp256k1');
         iv = crypto.pbkdf2Sync('secret', 'salt', 30000, 16, 'sha256');
+        console.log("iv "+iv)
         public_key = initialHandshake.generateKeys();
         initHandShakeServer()
     }
@@ -133,12 +134,11 @@ function initMeetingsServer(){
             console.log("Greetings Server bound")
         });
         server.on("message",(msg, source) => {
-            console.log("OTHER PUBLIC KEY RECEIVED length "+msg.length)
-            console.log(msg)
-
             //dont let to meet yourself
             if(source.address!=addresses[0].addr && msg.length==65){
             //if(msg.length==65){
+                console.log("OTHER PUBLIC KEY RECEIVED length "+msg.length)
+                console.log(msg)
                 sendHandShake(source.address,msg)
             }
         });
@@ -174,7 +174,7 @@ function sendHandShake(addr,other_pk){
         console.log("de-encrypted");
         console.log(dec);
         if(dec===strGreeting){
-            console.log(`secure handshake server got: ${msg} from ${addr}:${handShakePort}`);
+            console.log(`secure handshake server got: ${dec} from ${addr}:${handShakePort}`);
             sendAndGetContext(addr);
         }
         client.end();
