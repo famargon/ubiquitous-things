@@ -12,6 +12,7 @@ var contextServerPort = "9999";
 var strGreeting = "IMATHING";
 var greetingsPort = "8888";
 var hbPort = "9898";
+var handSPort = "9787";
 var jobsPort = "8069"; //listen port to receive jobs or exange applications information, its responsibility of the apps using this framework to be able to understand the json objects received in this port
 var thingContext = context.thingContext.getInstance().getContext();
 
@@ -20,10 +21,10 @@ var propObj = properties.getProperties();
 
 exports.init = function(){
     console.log("my id is " + JSON.stringify(thingContext))    
-    contextServer.init(contextServerPort);
-    jobsServer.init(jobsPort);
+    contextServer.init(contextServerPort,propObj.secure);
+    jobsServer.init(jobsPort,propObj.secure);
     if(propObj.lanMode){
-        lanDiscovery.init(contextServerPort,strGreeting,greetingsPort,hbPort);
+        lanDiscovery.init(contextServerPort,strGreeting,greetingsPort,hbPort,handSPort,propObj.secure);
         lanDiscovery.sendGreetings();
     }
 }
@@ -37,6 +38,12 @@ exports.getFirstAppInfo = function(){
 exports.getLastAppInfo = function(){
     return appsInfo.list.getInstance().getLastAppInfo();
 }
+
+setTimeout(function(){
+    var json = {test:"esto es test"};
+    jobsServer.sendAppInfo( thingContext , json);
+},5000)
+
 
 
 

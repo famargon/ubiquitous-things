@@ -6,6 +6,10 @@ const net = require("net");
 const context = require("../core/datamodel/thingContext.js")
 const colleages = require("../core/datamodel/knownThings.js");
 const lanUtils = require("./lanUtils.js")
+const crypto = require('crypto');
+const tls = require('tls');
+const fs = require('fs');
+
 
 var strGreeting;
 var meetingsPort; 
@@ -16,91 +20,242 @@ var subnet;
 var broadcastAddress;
 var bufferGreeting;
 var hbPort;
+var handShakePort;
+
+var secure;
+var other_public_key;
+var initialHandshake;
+var iv;
+var public_key;
+
+const serverOpts = {
+    key: fs.readFileSync('server-key.pem'),
+    cert: fs.readFileSync('server-cert.pem'),
+
+    // This is necessary only if using the client certificate authentication.
+    requestCert: true,
+
+    // This is necessary only if the client uses the self-signed certificate.
+    ca: [ fs.readFileSync('client-cert.pem') ]
+};
+
+const connOpts = {
+    // Necessary only if using the client certificate authentication
+    key: fs.readFileSync('client-key.pem'),
+    cert: fs.readFileSync('client-cert.pem'),
+
+    // Necessary only if the server uses the self-signed certificate
+    ca: [ fs.readFileSync('server-cert.pem') ]
+};
+
 
 //first called from core
-exports.init = function(interPort,greetings,greetingsPort,heartBPort){
+exports.init = function(interPort,greetings,greetingsPort,heartBPort,hsPort,security){
     console.log("Lan discovery initialized")
     contextServerPort = interPort;
     meetingsPort = greetingsPort;
     hbPort = heartBPort;
+    handShakePort = hsPort;
     strGreeting = greetings;
     bufferGreeting = new Buffer(strGreeting);
     addresses = lanUtils.getAddresses();
     subnet = ip.subnet(addresses[0].addr, addresses[0].netmask);
     broadcastAddress = subnet.broadcastAddress;
+    secure = security
+    if(secure){
+        initialHandshake = crypto.createECDH('secp256k1');
+        iv = crypto.pbkdf2Sync('secret', 'salt', 30000, 16, 'sha256');
+        public_key = initialHandshake.generateKeys();
+        initHandShakeServer()
+    }
     initMeetingsServer();
     initHeartBeatServer();
     startCheckHeartBeat();
+    
 }
 
 exports.sendGreetings = function(){
-    var client = dgram.createSocket("udp4");
-
-    client.bind({address: addresses[0].addr});
-    client.on("listening", function () {
-        client.setBroadcast(true);
-        console.log("-----------------");
-        console.log("sending greetings bc addr "+broadcastAddress);
-        client.send(bufferGreeting, 0, bufferGreeting.length, meetingsPort, broadcastAddress, function(err, bytes) {
-            console.log("closing greetings")
+    if(secure){
+        var client = dgram.createSocket("udp4");
+        client.bind({address: addresses[0].addr});
+        client.on("listening", function () {
+            client.setBroadcast(true);
+            console.log("-----------------");
+            client.send(public_key, 0, public_key.length, meetingsPort, broadcastAddress, function(err, bytes) {
+                console.log("closing secure greetings")
+            });
         });
-    });
+    }else{
+        var client = dgram.createSocket("udp4");
+        client.bind({address: addresses[0].addr});
+        client.on("listening", function () {
+            client.setBroadcast(true);
+            console.log("-----------------");
+            client.send(bufferGreeting, 0, bufferGreeting.length, meetingsPort, broadcastAddress, function(err, bytes) {
+                console.log("closing greetings")
+            });
+        });
+    }
+
 }
 
 //private
 
+function initHandShakeServer(){
+    const server = net.createServer((c) => {
+        // 'connection' listener
+        console.log('client connected');
+        c.on('end', () => {
+            console.log('client disconnected');
+        });
+        c.on('data',(data)=>{
+            other_public_key = data;
+            var secret = initialHandshake.computeSecret(other_public_key); 
+            const cipher = crypto.createCipheriv('aes-256-ctr', secret, iv);
+            var encrypted = cipher.update(strGreeting, 'utf8', 'hex');
+            encrypted += cipher.final('hex');
+            console.log("encrypted");
+            console.log(encrypted);
+            c.write(encrypted);
+            c.pipe(c);
+        })   
+    });
+    server.on('error', (err) => {
+        throw err;
+    });
+    server.listen(handShakePort, () => {
+        console.log('HandShake Server bound');
+    });
+}
 //server listening for new things
 function initMeetingsServer(){
-    var server = dgram.createSocket("udp4");
-    server.bind(meetingsPort,function(){
-        console.log("Greetings Server bound")
-    });
-    server.on("message",(msg, source) => {
-        //dont let to meet yourself
-        console.log(`test addr ${source.address}:${source.port}`);
-        if(source.address!=addresses[0].addr && msg.toString()===strGreeting){
-//        if(msg.toString()===strGreeting){
-            console.log(`server got: ${msg} from ${source.address}:${source.port}`);
-            sendAndGetContext(source.address);
-        }
-    });
+    if(secure){
+        var server = dgram.createSocket("udp4");
+        server.bind(meetingsPort,function(){
+            console.log("Greetings Server bound")
+        });
+        server.on("message",(msg, source) => {
+            console.log("length "+msg.length)
+            console.log(msg)
+
+            //dont let to meet yourself
+            //if(source.address!=addresses[0].addr && msg.length==32){
+            if(msg.length==65){
+                other_public_key = msg;
+                sendHandShake(source.address)
+            }
+        });
+    }else{
+        var server = dgram.createSocket("udp4");
+        server.bind(meetingsPort,function(){
+            console.log("Greetings Server bound")
+        });
+        server.on("message",(msg, source) => {
+            //dont let to meet yourself
+            if(source.address!=addresses[0].addr && msg.toString()===strGreeting){
+    //        if(msg.toString()===strGreeting){
+                console.log(`server got: ${msg} from ${source.address}:${source.port}`);
+                sendAndGetContext(source.address);
+            }
+        });
+    }
 }
 function initHeartBeatServer(){
-    var heartBeatServer = net.createServer((socket)=>{
-        socket.on('data', function(data) {
-            thingContext = context.thingContext.getInstance().getContext();
-            socket.write(JSON.stringify(thingContext));
-            socket.pipe(socket);
-            socket.end();
+    if(secure){
+        const server = tls.createServer(serverOpts, (socket) => {
+        console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
+            if(socket.authorized){
+                socket.on('data', function(data) {
+                    thingContext = context.thingContext.getInstance().getContext();
+                    socket.write(JSON.stringify(thingContext));
+                    socket.pipe(socket);
+                    socket.end();
+                });
+            }
         });
+        server.listen(hbPort, () => {
+        console.log('Secure HeartBeat Server bound');
+        });
+    }else{
+        var heartBeatServer = net.createServer((socket)=>{
+            socket.on('data', function(data) {
+                thingContext = context.thingContext.getInstance().getContext();
+                socket.write(JSON.stringify(thingContext));
+                socket.pipe(socket);
+                socket.end();
+            });
+        });
+        heartBeatServer.listen(hbPort,()=>{
+            console.log("HeartBeat Server bound");
+        });
+    }
+}
+//send
+function sendHandShake(addr){
+    const client = net.createConnection({port: handShakePort,host:addr}, function() {
+        //'connect' listener
+        console.log('connected to server!');
+        //send our public_key
+        client.write(public_key);
     });
-    heartBeatServer.listen(hbPort,()=>{
-        console.log("HeartBeat Server bound");
+    client.on('data', function(data) {
+        var encrypted = data;
+        var secret = initialHandshake.computeSecret(other_public_key);
+        var decipher = crypto.createDecipheriv('aes-256-ctr', secret, iv)
+        var dec = decipher.update(encrypted, 'hex', 'utf8')
+        dec += decipher.final('utf8');
+        console.log("de-encrypted");
+        console.log(dec);
+        if(dec===strGreeting){
+            console.log(`secure handshake server got: ${msg} from ${addr}:${handShakePort}`);
+            sendAndGetContext(addr);
+        }
+        client.end();
+    });
+    client.on('end', function() {
+    console.log('disconnected from server');
     });
 }
-
 //interchange of contexts
 //sends our context to the contextserver of the thing in addr and get its context from the reply
 function sendAndGetContext(addr){
-    //try to connect  to the context server of the thing we have just meet
-    var client = net.connect({port: contextServerPort,host:addr}, () => {
-        // 'connect' listener
-        console.log('connected to server!');
-        //we send our own context
-        thingContext = context.thingContext.getInstance().getContext();
-        client.write(JSON.stringify(thingContext));
-    });
-    client.on('data', (data) => {
-        console.log("Thing received in LAN client");
-        console.log(JSON.parse(data));
-        console.log("----------------------------");
-        //we receive its context
-        timing += colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
-        client.end();
-    });
-    client.on('end', () => {
-        console.log('disconnected from server');
-    });
+    if(secure){
+        const socket = tls.connect(contextServerPort,addr, connOpts, () => {
+            console.log('client connected',socket.authorized ? 'authorized' : 'unauthorized');
+            if(socket.authorized){
+                thingContext = context.thingContext.getInstance().getContext();
+                client.write(JSON.stringify(thingContext));
+            }
+        });
+        socket.on('data', (data) => {
+            console.log(data);
+            timing += colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
+            client.end();
+        });
+        socket.on('end', () => {
+        server.close();
+        });
+    }else{
+        //try to connect  to the context server of the thing we have just meet
+        var client = net.connect({port: contextServerPort,host:addr}, () => {
+            // 'connect' listener
+            console.log('connected to server!');
+            //we send our own context
+            thingContext = context.thingContext.getInstance().getContext();
+            client.write(JSON.stringify(thingContext));
+        });
+        client.on('data', (data) => {
+            console.log("Thing received in LAN client");
+            console.log(JSON.parse(data));
+            console.log("----------------------------");
+            //we receive its context
+            timing += colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
+            client.end();
+        });
+        client.on('end', () => {
+            console.log('disconnected from server');
+        });
+    }
 }
 
 //heartbeat
@@ -118,23 +273,47 @@ function checkHB(){
     setTimeout(checkHB,timing)
 }
 var sendHeartBeat = function(destinationContext){
-    //send to its heartbeat server
-    var client = net.connect({port: hbPort,host:destinationContext.addr}, () => {
-        client.write("Are u alive??");
-    });
-    client.on('data', (data) => {
-        console.log(JSON.parse(data));
-        //we receive its context
-        colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
-        client.end();
-    });
-    client.on('end', () => {
-        console.log('disconnected from server');
-        client.destroy()
-    });
-    client.on("error",()=>{
-        console.log("Error on heartbeat, deleted friend "+destinationContext.id);
-        colleages.list.getInstance().delete(destinationContext.id)
-        timing -= 5000;
-    });
+    if(secure){
+        const client = tls.connect(hbPort,destinationContext.addr, connOpts, () => {
+            console.log('client connected',client.authorized ? 'authorized' : 'unauthorized');
+            if(socket.authorized){
+                client.write("Are u alive??");
+            }
+        });
+        client.on('data', (data) => {
+            console.log(JSON.parse(data));
+            //we receive its context
+            colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
+            client.end();
+        });
+        client.on('end', () => {
+            console.log('disconnected from server');
+            client.destroy()
+        });
+        client.on("error",()=>{
+            console.log("Error on heartbeat, deleted friend "+destinationContext.id);
+            colleages.list.getInstance().delete(destinationContext.id)
+            timing -= 5000;
+        });
+    }else{
+        //send to its heartbeat server
+        var client = net.connect({port: hbPort,host:destinationContext.addr}, () => {
+            client.write("Are u alive??");
+        });
+        client.on('data', (data) => {
+            console.log(JSON.parse(data));
+            //we receive its context
+            colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
+            client.end();
+        });
+        client.on('end', () => {
+            console.log('disconnected from server');
+            client.destroy()
+        });
+        client.on("error",()=>{
+            console.log("Error on heartbeat, deleted friend "+destinationContext.id);
+            colleages.list.getInstance().delete(destinationContext.id)
+            timing -= 5000;
+        });
+    }
 }

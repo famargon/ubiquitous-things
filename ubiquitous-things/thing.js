@@ -1,6 +1,8 @@
 //entry point to the framework in other words the API
 var core = require("./core/core.js")
 var colleages = require("./core/datamodel/knownThings.js")
+var events = require("./core/eventsEngine/jobsEvent.js")
+var appInfo = require("./core/datamodel/appsInfo.js")
 
 core.init()
 
@@ -22,4 +24,12 @@ exports.getFirstAppInfo = function(){
 }
 exports.getLastAppInfo = function(){
     return core.getLastAppInfo();
+}
+
+exports.setAppInfoListener = function(fun){
+    events.setListenerNewAppInfo(fun)
+}
+
+exports.setAppInfoDone = function(id) {
+    appInfo.list.getInstance().delete(id)
 }

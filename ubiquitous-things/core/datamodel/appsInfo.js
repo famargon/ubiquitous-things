@@ -1,6 +1,7 @@
 "use strict";
 
 var array = require('lodash/array');
+var jobsEvent = require('../eventsEngine/jobsEvent.js')
 
 //Singleton pattern for list of jobs or applications information that they exchange
 exports.list = (function () {
@@ -15,14 +16,32 @@ exports.list = (function () {
     // Private methods and variables
     //new items in this list will be at the end, oldest items will be at the begining
     var list = [];
-
+    var intId = 0;
  
     return {
  
       // Public methods and variables
       addAppInfo: function(obj){
-          list.push(obj);
+        if(intId==1000){
+          intId = 0
+        }
+        obj.appInfoId= intId++;
+        list.push(obj);
+        jobsEvent.emitNewAppInfo(obj);
       },
+
+      //DELETE APP INFO
+      delete: function(obj){
+        var index = array.findIndex(list,function(a){
+              return a.appInfoId === obj.appInfoId;
+        });
+        if(index>-1){
+          var toRet = list[index]
+          list.splice(index,1);
+          return toRet;
+        }
+      },
+
       //returns the oldest job or app info and delete it form the list
       getFirstAppInfo: function(){
           return list.shift();
