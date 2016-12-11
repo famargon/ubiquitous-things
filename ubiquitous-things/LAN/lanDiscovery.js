@@ -113,7 +113,7 @@ function sendAndGetContext(addr){
         socket.on('data', (data) => {
             console.log(data);
             timing += colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
-            client.end();
+            socket.end();
         });
         socket.on('end', () => {
         server.close();
