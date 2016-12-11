@@ -23,7 +23,6 @@ var hbPort;
 var handShakePort;
 
 var secure;
-var other_public_key;
 var initialHandshake;
 var iv;
 var public_key;
@@ -109,8 +108,7 @@ function initHandShakeServer(){
             console.log('client disconnected');
         });
         c.on('data',(data)=>{
-            other_public_key = data;
-            var secret = initialHandshake.computeSecret(other_public_key); 
+            var secret = initialHandshake.computeSecret(data); 
             const cipher = crypto.createCipheriv('aes-256-ctr', secret, iv);
             var encrypted = cipher.update(strGreeting, 'utf8', 'hex');
             encrypted += cipher.final('hex');
@@ -135,14 +133,13 @@ function initMeetingsServer(){
             console.log("Greetings Server bound")
         });
         server.on("message",(msg, source) => {
-            console.log("length "+msg.length)
+            console.log("OTHER PUBLIC KEY RECEIVED length "+msg.length)
             console.log(msg)
 
             //dont let to meet yourself
             //if(source.address!=addresses[0].addr && msg.length==32){
             if(msg.length==65){
-                other_public_key = msg;
-                sendHandShake(source.address)
+                sendHandShake(source.address,other_pk)
             }
         });
     }else{
@@ -160,38 +157,8 @@ function initMeetingsServer(){
         });
     }
 }
-function initHeartBeatServer(){
-    if(secure){
-        const server = tls.createServer(serverOpts, (socket) => {
-        console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
-            if(socket.authorized){
-                socket.on('data', function(data) {
-                    thingContext = context.thingContext.getInstance().getContext();
-                    socket.write(JSON.stringify(thingContext));
-                    socket.pipe(socket);
-                    socket.end();
-                });
-            }
-        });
-        server.listen(hbPort, () => {
-        console.log('Secure HeartBeat Server bound');
-        });
-    }else{
-        var heartBeatServer = net.createServer((socket)=>{
-            socket.on('data', function(data) {
-                thingContext = context.thingContext.getInstance().getContext();
-                socket.write(JSON.stringify(thingContext));
-                socket.pipe(socket);
-                socket.end();
-            });
-        });
-        heartBeatServer.listen(hbPort,()=>{
-            console.log("HeartBeat Server bound");
-        });
-    }
-}
 //send
-function sendHandShake(addr){
+function sendHandShake(addr,other_pk){
     const client = net.createConnection({port: handShakePort,host:addr}, function() {
         //'connect' listener
         console.log('connected to server!');
@@ -200,7 +167,7 @@ function sendHandShake(addr){
     });
     client.on('data', function(data) {
         var encrypted = data;
-        var secret = initialHandshake.computeSecret(other_public_key);
+        var secret = initialHandshake.computeSecret(other_pk);
         var decipher = crypto.createDecipheriv('aes-256-ctr', secret, iv)
         var dec = decipher.update(encrypted, 'hex', 'utf8')
         dec += decipher.final('utf8');
@@ -257,7 +224,36 @@ function sendAndGetContext(addr){
         });
     }
 }
-
+function initHeartBeatServer(){
+    if(secure){
+        const server = tls.createServer(serverOpts, (socket) => {
+        console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
+            if(socket.authorized){
+                socket.on('data', function(data) {
+                    thingContext = context.thingContext.getInstance().getContext();
+                    socket.write(JSON.stringify(thingContext));
+                    socket.pipe(socket);
+                    socket.end();
+                });
+            }
+        });
+        server.listen(hbPort, () => {
+        console.log('Secure HeartBeat Server bound');
+        });
+    }else{
+        var heartBeatServer = net.createServer((socket)=>{
+            socket.on('data', function(data) {
+                thingContext = context.thingContext.getInstance().getContext();
+                socket.write(JSON.stringify(thingContext));
+                socket.pipe(socket);
+                socket.end();
+            });
+        });
+        heartBeatServer.listen(hbPort,()=>{
+            console.log("HeartBeat Server bound");
+        });
+    }
+}
 //heartbeat
 var timing = 5000;
 function startCheckHeartBeat(){    
