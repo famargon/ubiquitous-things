@@ -116,7 +116,7 @@ function sendAndGetContext(addr){
             socket.end();
         });
         socket.on('end', () => {
-        server.close();
+            socket.close();
         });
     }else{
         //try to connect  to the context server of the thing we have just meet
