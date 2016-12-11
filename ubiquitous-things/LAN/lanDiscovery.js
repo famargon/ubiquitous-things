@@ -116,7 +116,7 @@ function sendAndGetContext(addr){
             socket.end();
         });
         socket.on('end', () => {
-            socket.close();
+            socket.destroy();
         });
     }else{
         //try to connect  to the context server of the thing we have just meet
@@ -137,6 +137,7 @@ function sendAndGetContext(addr){
         });
         client.on('end', () => {
             console.log('disconnected from server');
+            client.destroy()
         });
     }
 }
@@ -188,7 +189,7 @@ var sendHeartBeat = function(destinationContext){
     if(secure){
         const client = tls.connect(hbPort,destinationContext.addr, connOpts, () => {
             console.log('client connected',client.authorized ? 'authorized' : 'unauthorized');
-            if(socket.authorized){
+            if(client.authorized){
                 client.write("Are u alive??");
             }
         });
