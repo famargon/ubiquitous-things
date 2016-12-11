@@ -137,8 +137,8 @@ function initMeetingsServer(){
             console.log(msg)
 
             //dont let to meet yourself
-            //if(source.address!=addresses[0].addr && msg.length==32){
-            if(msg.length==65){
+            if(source.address!=addresses[0].addr && msg.length==65){
+            //if(msg.length==65){
                 sendHandShake(source.address,msg)
             }
         });
