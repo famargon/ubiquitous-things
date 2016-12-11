@@ -4,7 +4,9 @@ exports.getProperties = function(){
     return {
         lanMode: true,
         contextVersion: "0",
+        //its usefull for a developer to change the appName
         appName: "testName",
-        secure: true
+        secure: true,
+        verbose: false
     }
 }

@@ -35,12 +35,10 @@ exports.list = (function () {
           if(index>-1){
               //update
               list[index] = thing;
-              console.log("thing UPDATED from list of things!!")
               return 0;
           }else{
               //save 
               list.push(thing);
-              console.log("thing added to list of things!!")
               return 5000;
           }
       },

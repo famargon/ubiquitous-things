@@ -8,20 +8,22 @@ const appsInfo = require("./datamodel/appsInfo.js")
 var jobsPort;
 var secure;
 var connOpts;
+var verbose;
 
-exports.init = function(port,security,options,cOpts){
+exports.init = function(verbose,port,security,options,cOpts){
     //it will allow us to keep a list of jobs or just information, which has been sent to us from things that know me
+    this.verbose = verbose;
     secure = security;
     if(secure){
         connOpts = cOpts;
         const server = tls.createServer(options, (socket) => {
-        console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
+        if(verbose)console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
             if(socket.authorized){
-                console.log('client connected to jobs server');
+                if(verbose)console.log('client connected to jobs server');
                 socket.on('data', function(data) {
                     //new job or app info received, store it
                     var appInfo = JSON.parse(data);
-                    console.log(appInfo)
+                    if(verbose)console.log(appInfo)
                     appsInfo.list.getInstance().addAppInfo(appInfo);
                 });
             }
@@ -32,11 +34,11 @@ exports.init = function(port,security,options,cOpts){
         });
     }else{
         const appsInfoServer = net.createServer((socket)=>{
-            console.log('client connected to jobs server');
+            if(verbose)console.log('client connected to jobs server');
             socket.on('data', function(data) {
                 //new job or app info received, store it
                 var appInfo = JSON.parse(data);
-                console.log(appInfo)
+                if(verbose)console.log(appInfo)
                 appsInfo.list.getInstance().addAppInfo(appInfo);
             });
         });
@@ -52,25 +54,25 @@ exports.sendAppInfo = function(sendTo,jsonAppInfo){
     if(sendTo!=undefined){
         if(secure){
             const socket = tls.connect(jobsPort,sendTo.addr, connOpts, () => {
-                console.log('client connected',socket.authorized ? 'authorized' : 'unauthorized');
+                if(verbose)console.log('client connected',socket.authorized ? 'authorized' : 'unauthorized');
                 if(socket.authorized){
                     // 'connect' listener
-                    console.log('connected to jobs server!')
+                    if(verbose)console.log('connected to jobs server!')
                     socket.write(JSON.stringify(jsonAppInfo))
                 }
             });
             socket.on('end', () => {
-                console.log('disconnected from jobs server');
+                if(verbose)console.log('disconnected from jobs server');
                 socket.destroy()
             });
         }else{
             var client = net.connect({port: jobsPort,host:sendTo.addr}, () => {
                 // 'connect' listener
-                console.log('connected to jobs server!')
+                if(verbose)console.log('connected to jobs server!')
                 client.write(JSON.stringify(jsonAppInfo))
             });
             client.on('end', () => {
-                console.log('disconnected from jobs server');
+                if(verbose)console.log('disconnected from jobs server');
                 client.destroy()
             });
         }        

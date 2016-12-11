@@ -9,14 +9,14 @@ var thingContext;
 
 //interchanges server
 
-exports.init = function(interchangesPort,secure,options){
+exports.init = function(verbose,interchangesPort,secure,options){
     if(secure){
         const server = tls.createServer(options, (socket) => {
-        console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
+        if(verbose)console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
             if(socket.authorized){
                 socket.on('data', function(data) {
                     var newThing = JSON.parse(data);
-                    console.log(newThing)
+                    if(verbose)console.log(newThing)
                     if(newThing.id!=undefined){
                         //add as a known thing saving it's context
                         things.list.getInstance().saveOrUpdateThing(newThing);
@@ -30,14 +30,14 @@ exports.init = function(interchangesPort,secure,options){
             }
         });
         server.listen(interchangesPort, () => {
-        console.log('Secure Context Server bound');
+            console.log('Secure Context Server bound');
         });
     }else{
         const contextServer = net.createServer((socket)=>{
-            console.log('client connected to context server');
+            if(verbose)console.log('client connected to context server');
             socket.on('data', function(data) {
                 var newThing = JSON.parse(data);
-                console.log(newThing)
+                if(verbose)console.log(newThing)
                 if(newThing.id!=undefined){
                     //add as a known thing saving it's context
                     things.list.getInstance().saveOrUpdateThing(newThing);

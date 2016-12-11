@@ -8,6 +8,7 @@ const context = require("../core/datamodel/thingContext.js")
 const colleages = require("../core/datamodel/knownThings.js");
 const lanUtils = require("./lanUtils.js")
 
+var verbose;
 var strGreeting;
 var meetingsPort; 
 var contextServerPort;
@@ -24,7 +25,8 @@ var connOpts;
 
 
 //first called from core
-exports.init = function(interPort,greetings,greetingsPort,heartBPort,hsPort,security,sOpts,cOpts){
+exports.init = function(verbose,interPort,greetings,greetingsPort,heartBPort,hsPort,security,sOpts,cOpts){
+    this.verbose = verbose;
     contextServerPort = interPort;
     meetingsPort = greetingsPort;
     hbPort = heartBPort;
@@ -48,9 +50,9 @@ exports.sendGreetings = function(){
     client.bind({address: addresses[0].addr});
     client.on("listening", function () {
         client.setBroadcast(true);
-        console.log("-----------------");
+        if(verbose)console.log("-----------------");
         client.send(bufferGreeting, 0, bufferGreeting.length, meetingsPort, broadcastAddress, function(err, bytes) {
-            console.log("closing greetings")
+            if(verbose)console.log("closing greetings")
         });
     });
 }
@@ -65,7 +67,7 @@ function initMeetingsServer(){
     server.on("message",(msg, source) => {
         //dont let to meet yourself
         if(source.address!=addresses[0].addr && msg.toString()===strGreeting){
-            console.log(`server got: ${msg} from ${source.address}:${source.port}`);
+            if(verbose)console.log(`server got: ${msg} from ${source.address}:${source.port}`);
             sendAndGetContext(source.address);
         }
     });
@@ -75,14 +77,14 @@ function initMeetingsServer(){
 function sendAndGetContext(addr){
     if(secure){
         const socket = tls.connect(contextServerPort,addr, connOpts, () => {
-            console.log('client connected',socket.authorized ? 'authorized' : 'unauthorized');
+            if(verbose)console.log('client connected',socket.authorized ? 'authorized' : 'unauthorized');
             if(socket.authorized){
                 thingContext = context.thingContext.getInstance().getContext();
                 socket.write(JSON.stringify(thingContext));
             }
         });
         socket.on('data', (data) => {
-            console.log(data);
+            if(verbose)console.log(data);
             timing += colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
             socket.end();
         });
@@ -93,21 +95,21 @@ function sendAndGetContext(addr){
         //try to connect  to the context server of the thing we have just meet
         var client = net.connect({port: contextServerPort,host:addr}, () => {
             // 'connect' listener
-            console.log('connected to server!');
+            if(verbose)console.log('connected to server!');
             //we send our own context
             thingContext = context.thingContext.getInstance().getContext();
             client.write(JSON.stringify(thingContext));
         });
         client.on('data', (data) => {
-            console.log("Thing received in LAN client");
-            console.log(JSON.parse(data));
-            console.log("----------------------------");
+            if(verbose)console.log("Thing received in LAN client");
+            if(verbose)console.log(JSON.parse(data));
+            if(verbose)console.log("----------------------------");
             //we receive its context
             timing += colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
             client.end();
         });
         client.on('end', () => {
-            console.log('disconnected from server');
+            if(verbose)console.log('disconnected from server');
             client.destroy()
         });
     }
@@ -115,7 +117,7 @@ function sendAndGetContext(addr){
 function initHeartBeatServer(){
     if(secure){
         const server = tls.createServer(serverOpts, (socket) => {
-        console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
+        if(verbose)console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
             if(socket.authorized){
                 /*socket.on('data', function(data) {
                     thingContext = context.thingContext.getInstance().getContext();
@@ -132,7 +134,7 @@ function initHeartBeatServer(){
             });
         });
         server.listen(hbPort, () => {
-        console.log('Secure HeartBeat Server bound');
+            console.log('Secure HeartBeat Server bound');
         });
     }else{
         var heartBeatServer = net.createServer((socket)=>{
@@ -156,32 +158,32 @@ function startCheckHeartBeat(){
 function checkHB(){
     var list =colleages.list.getInstance().getAll()
     for(var pos in list){
-        console.log("start heartbeat "+JSON.stringify(list[pos]))
+        if(verbose)console.log("start heartbeat "+JSON.stringify(list[pos]))
         sendHeartBeat(list[pos])
-        console.log("end heartbeat")
+        if(verbose)console.log("end heartbeat")
     } 
     setTimeout(checkHB,timing)
 }
 var sendHeartBeat = function(destinationContext){
     if(secure){
         const client = tls.connect(hbPort,destinationContext.addr, connOpts, () => {
-            console.log('client connected',client.authorized ? 'authorized' : 'unauthorized');
+            if(verbose)console.log('client connected',client.authorized ? 'authorized' : 'unauthorized');
             if(client.authorized){
                 client.write("Are u alive??");
             }
         });
         client.on('data', (data) => {
-            console.log(JSON.parse(data));
+            if(verbose)console.log(JSON.parse(data));
             //we receive its context
             colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
             client.end();
         });
         client.on('end', () => {
-            console.log('disconnected from server');
+            if(verbose)console.log('disconnected from server');
             client.destroy()
         });
         client.on("error",()=>{
-            console.log("Error on heartbeat, deleted friend "+destinationContext.id);
+            if(verbose)console.log("Error on heartbeat, deleted friend "+destinationContext.id);
             colleages.list.getInstance().delete(destinationContext.id)
             timing -= 5000;
         });
@@ -191,17 +193,17 @@ var sendHeartBeat = function(destinationContext){
             client.write("Are u alive??");
         });
         client.on('data', (data) => {
-            console.log(JSON.parse(data));
+            if(verbose)console.log(JSON.parse(data));
             //we receive its context
             colleages.list.getInstance().saveOrUpdateThing(JSON.parse(data));
             client.end();
         });
         client.on('end', () => {
-            console.log('disconnected from server');
+            if(verbose)console.log('disconnected from server');
             client.destroy()
         });
         client.on("error",()=>{
-            console.log("Error on heartbeat, deleted friend "+destinationContext.id);
+            if(verbose)console.log("Error on heartbeat, deleted friend "+destinationContext.id);
             colleages.list.getInstance().delete(destinationContext.id)
             timing -= 5000;
         });

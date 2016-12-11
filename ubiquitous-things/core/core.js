@@ -20,6 +20,7 @@ var thingContext = context.thingContext.getInstance().getContext();
 var propObj = properties.getProperties();
 
 exports.init = function(){
+    var verbose = propObj.verbose;
     console.log("my id is " + JSON.stringify(thingContext))  
     var serverOpts;
     var connOpts;  
@@ -46,10 +47,10 @@ exports.init = function(){
             ca: [ fs.readFileSync('./server-cert.pem') ]
         };
     }
-    contextServer.init(contextServerPort,propObj.secure,serverOpts);
-    jobsServer.init(jobsPort,propObj.secure,serverOpts,connOpts);
+    contextServer.init(verbose,contextServerPort,propObj.secure,serverOpts);
+    jobsServer.init(verbose,jobsPort,propObj.secure,serverOpts,connOpts);
     if(propObj.lanMode){
-        lanDiscovery.init(contextServerPort,strGreeting,greetingsPort,hbPort,handSPort,propObj.secure,serverOpts,connOpts);
+        lanDiscovery.init(verbose,contextServerPort,strGreeting,greetingsPort,hbPort,handSPort,propObj.secure,serverOpts,connOpts);
         lanDiscovery.sendGreetings();
     }
 }
@@ -64,10 +65,6 @@ exports.getLastAppInfo = function(){
     return appsInfo.list.getInstance().getLastAppInfo();
 }
 
-setTimeout(function(){
-    var json = {test:"esto es test"};
-    jobsServer.sendAppInfo( thingContext , json);
-},5000)
 
 
 
