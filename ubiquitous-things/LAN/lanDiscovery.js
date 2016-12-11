@@ -61,13 +61,6 @@ exports.init = function(interPort,greetings,greetingsPort,heartBPort,hsPort,secu
     subnet = ip.subnet(addresses[0].addr, addresses[0].netmask);
     broadcastAddress = subnet.broadcastAddress;
     secure = security
-    if(secure){
-        initialHandshake = crypto.createECDH('secp256k1');
-        iv = crypto.pbkdf2Sync('secret', 'salt', 30000, 16, 'sha256');
-        console.log("iv "+iv)
-        public_key = initialHandshake.generateKeys();
-        initHandShakeServer()
-    }
     initMeetingsServer();
     initHeartBeatServer();
     startCheckHeartBeat();
@@ -75,112 +68,30 @@ exports.init = function(interPort,greetings,greetingsPort,heartBPort,hsPort,secu
 }
 
 exports.sendGreetings = function(){
-    if(secure){
-        var client = dgram.createSocket("udp4");
-        client.bind({address: addresses[0].addr});
-        client.on("listening", function () {
-            client.setBroadcast(true);
-            console.log("-----------------");
-            client.send(public_key, 0, public_key.length, meetingsPort, broadcastAddress, function(err, bytes) {
-                console.log("closing secure greetings")
-            });
+    var client = dgram.createSocket("udp4");
+    client.bind({address: addresses[0].addr});
+    client.on("listening", function () {
+        client.setBroadcast(true);
+        console.log("-----------------");
+        client.send(bufferGreeting, 0, bufferGreeting.length, meetingsPort, broadcastAddress, function(err, bytes) {
+            console.log("closing greetings")
         });
-    }else{
-        var client = dgram.createSocket("udp4");
-        client.bind({address: addresses[0].addr});
-        client.on("listening", function () {
-            client.setBroadcast(true);
-            console.log("-----------------");
-            client.send(bufferGreeting, 0, bufferGreeting.length, meetingsPort, broadcastAddress, function(err, bytes) {
-                console.log("closing greetings")
-            });
-        });
-    }
-
+    });
 }
 
 //private
-
-function initHandShakeServer(){
-    const server = net.createServer((c) => {
-        // 'connection' listener
-        console.log('client connected');
-        c.on('end', () => {
-            console.log('client disconnected');
-        });
-        c.on('data',(data)=>{
-            var secret = initialHandshake.computeSecret(data); 
-            const cipher = crypto.createCipheriv('aes-256-ctr', secret, iv);
-            var encrypted = cipher.update(strGreeting, 'utf8', 'hex');
-            encrypted += cipher.final('hex');
-            console.log("encrypted");
-            console.log(encrypted);
-            c.write(encrypted);
-            c.pipe(c);
-        })   
-    });
-    server.on('error', (err) => {
-        throw err;
-    });
-    server.listen(handShakePort, () => {
-        console.log('HandShake Server bound');
-    });
-}
 //server listening for new things
 function initMeetingsServer(){
-    if(secure){
-        var server = dgram.createSocket("udp4");
-        server.bind(meetingsPort,function(){
-            console.log("Greetings Server bound")
-        });
-        server.on("message",(msg, source) => {
-            //dont let to meet yourself
-            if(source.address!=addresses[0].addr && msg.length==65){
-            //if(msg.length==65){
-                console.log("OTHER PUBLIC KEY RECEIVED length "+msg.length)
-                console.log(msg)
-                sendHandShake(source.address,msg)
-            }
-        });
-    }else{
-        var server = dgram.createSocket("udp4");
-        server.bind(meetingsPort,function(){
-            console.log("Greetings Server bound")
-        });
-        server.on("message",(msg, source) => {
-            //dont let to meet yourself
-            if(source.address!=addresses[0].addr && msg.toString()===strGreeting){
-    //        if(msg.toString()===strGreeting){
-                console.log(`server got: ${msg} from ${source.address}:${source.port}`);
-                sendAndGetContext(source.address);
-            }
-        });
-    }
-}
-//send
-function sendHandShake(addr,other_pk){
-    const client = net.createConnection({port: handShakePort,host:addr}, function() {
-        //'connect' listener
-        console.log('connected to server!');
-        //send our public_key
-        client.write(public_key);
+    var server = dgram.createSocket("udp4");
+    server.bind(meetingsPort,function(){
+        console.log("Greetings Server bound")
     });
-    client.on('data', function(data) {
-        var encrypted = data;
-        var secret = initialHandshake.computeSecret(other_pk);
-        var decipher = crypto.createDecipheriv('aes-256-ctr', secret, iv)
-        var dec = decipher.update(encrypted, 'hex', 'utf8')
-        dec += decipher.final('utf8');
-        console.log("de-encrypted");
-        console.log(dec);
-        if(dec===strGreeting){
-            console.log(`secure handshake server got: ${dec} from ${addr}:${handShakePort}`);
-            sendAndGetContext(addr);
+    server.on("message",(msg, source) => {
+        //dont let to meet yourself
+        if(source.address!=addresses[0].addr && msg.toString()===strGreeting){
+            console.log(`server got: ${msg} from ${source.address}:${source.port}`);
+            sendAndGetContext(source.address);
         }
-        client.end();
-    });
-    client.on('end', function() {
-    console.log('disconnected from server');
     });
 }
 //interchange of contexts
