@@ -25,7 +25,6 @@ var connOpts;
 
 //first called from core
 exports.init = function(interPort,greetings,greetingsPort,heartBPort,hsPort,security,sOpts,cOpts){
-    console.log("Lan discovery initialized")
     contextServerPort = interPort;
     meetingsPort = greetingsPort;
     hbPort = heartBPort;

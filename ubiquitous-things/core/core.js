@@ -26,28 +26,28 @@ exports.init = function(){
     if(propObj.secure){
         const fs = require('fs');
         serverOpts = {
-            key: fs.readFileSync('server-key.pem'),
-            cert: fs.readFileSync('server-cert.pem'),
+            key: fs.readFileSync('./server-key.pem'),
+            cert: fs.readFileSync('./server-cert.pem'),
             // This is necessary only if using the client certificate authentication.
             requestCert: true,
             rejectUnauthorized: true,
             // This is necessary only if the client uses the self-signed certificate.
-            ca: [ fs.readFileSync('client-cert.pem') ]
+            ca: [ fs.readFileSync('./client-cert.pem') ]
         };
         connOpts = {
             // Necessary only if using the client certificate authentication
-            key: fs.readFileSync('client-key.pem'),
-            cert: fs.readFileSync('client-cert.pem'),
+            key: fs.readFileSync('./client-key.pem'),
+            cert: fs.readFileSync('./client-cert.pem'),
             rejectUnauthorized: true,
             checkServerIdentity: function (host, cert) {
             return undefined;
             },
             // Necessary only if the server uses the self-signed certificate
-            ca: [ fs.readFileSync('server-cert.pem') ]
+            ca: [ fs.readFileSync('./server-cert.pem') ]
         };
     }
     contextServer.init(contextServerPort,propObj.secure,serverOpts);
-    jobsServer.init(jobsPort,propObj.secure,serverOpts);
+    jobsServer.init(jobsPort,propObj.secure,serverOpts,connOpts);
     if(propObj.lanMode){
         lanDiscovery.init(contextServerPort,strGreeting,greetingsPort,hbPort,handSPort,propObj.secure,serverOpts,connOpts);
         lanDiscovery.sendGreetings();

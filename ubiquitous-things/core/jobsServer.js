@@ -7,11 +7,13 @@ const appsInfo = require("./datamodel/appsInfo.js")
 //jobs and interchange apps information server
 var jobsPort;
 var secure;
+var connOpts;
 
-exports.init = function(port,security,options){
+exports.init = function(port,security,options,cOpts){
     //it will allow us to keep a list of jobs or just information, which has been sent to us from things that know me
     secure = security;
     if(secure){
+        connOpts = cOpts;
         const server = tls.createServer(options, (socket) => {
         console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
             if(socket.authorized){
@@ -49,7 +51,18 @@ exports.init = function(port,security,options){
 exports.sendAppInfo = function(sendTo,jsonAppInfo){
     if(sendTo!=undefined){
         if(secure){
-
+            const socket = tls.connect(jobsPort,sendTo.addr, connOpts, () => {
+                console.log('client connected',socket.authorized ? 'authorized' : 'unauthorized');
+                if(socket.authorized){
+                    // 'connect' listener
+                    console.log('connected to jobs server!')
+                    socket.write(JSON.stringify(jsonAppInfo))
+                }
+            });
+            socket.on('end', () => {
+                console.log('disconnected from jobs server');
+                socket.destroy()
+            });
         }else{
             var client = net.connect({port: jobsPort,host:sendTo.addr}, () => {
                 // 'connect' listener
@@ -58,6 +71,7 @@ exports.sendAppInfo = function(sendTo,jsonAppInfo){
             });
             client.on('end', () => {
                 console.log('disconnected from jobs server');
+                client.destroy()
             });
         }        
     }

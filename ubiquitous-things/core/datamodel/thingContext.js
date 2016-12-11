@@ -1,5 +1,6 @@
 "use strict";
 
+const properties = require("../properties.js");
 
 //Singleton pattern for things context
 exports.thingContext = (function () {
@@ -12,9 +13,8 @@ exports.thingContext = (function () {
     // Singleton
  
     // Private methods and variables
-    const properties = require("../properties.js");
     var propObj = properties.getProperties();
-    var addrs = [{addr:-1}]
+    var addrs;
     if(propObj.lanMode){
       const lanUtils  = require("../../LAN/lanUtils.js");
       addrs = lanUtils.getAddresses();

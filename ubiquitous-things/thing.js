@@ -1,3 +1,5 @@
+"use strict";
+
 //entry point to the framework in other words the API
 var core = require("./core/core.js")
 var colleages = require("./core/datamodel/knownThings.js")
