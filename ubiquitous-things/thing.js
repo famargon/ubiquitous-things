@@ -14,9 +14,9 @@ exports.getAllKnownThings = function(){
     return colleages.list.getInstance().getAll()
 }
 
-//destination context of destination app, recommended to get this context with knownThings.getThing
+//destination, context of destination app, recommended to get this context with knownThings.getThing
 //json, the json to send to the destination app
-exports.addAppInfo = function(destination,json){
+exports.sendAppInfo = function(destination,json){
     core.sendAppInfo(destination,json)
 }
 exports.getFirstAppInfo = function(){
@@ -26,10 +26,17 @@ exports.getLastAppInfo = function(){
     return core.getLastAppInfo();
 }
 
+//setAppInfoListener and setAppInfoDone should be used together by developers to delete a job when it's done
+//fun have to be a function which accepts the json of the appInfo
 exports.setAppInfoListener = function(fun){
     events.setListenerNewAppInfo(fun)
 }
-
 exports.setAppInfoDone = function(id) {
-    appInfo.list.getInstance().delete(id)
+    appInfo.list.getInstance().delete(appInfoId)
+}
+
+//sets the listener for a incoming app info and finnally delete this job
+//fun have to be a function which accepts the json of the appInfo
+exports.setAIListenerDone = function(fun){
+    events.setListenerDoneNewAppInfo(fun)
 }

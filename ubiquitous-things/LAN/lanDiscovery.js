@@ -3,13 +3,10 @@
 const dgram = require('dgram');
 const ip = require('ip');
 const net = require("net");
+const tls = require('tls');
 const context = require("../core/datamodel/thingContext.js")
 const colleages = require("../core/datamodel/knownThings.js");
 const lanUtils = require("./lanUtils.js")
-const crypto = require('crypto');
-const tls = require('tls');
-const fs = require('fs');
-
 
 var strGreeting;
 var meetingsPort; 
@@ -21,40 +18,13 @@ var broadcastAddress;
 var bufferGreeting;
 var hbPort;
 var handShakePort;
-
 var secure;
-var initialHandshake;
-var iv;
-var public_key;
-
-const serverOpts = {
-    key: fs.readFileSync('server-key.pem'),
-    cert: fs.readFileSync('server-cert.pem'),
-
-    // This is necessary only if using the client certificate authentication.
-    requestCert: true,
-    rejectUnauthorized: true,
-
-    // This is necessary only if the client uses the self-signed certificate.
-    ca: [ fs.readFileSync('client-cert.pem') ]
-};
-
-const connOpts = {
-    // Necessary only if using the client certificate authentication
-    key: fs.readFileSync('client-key.pem'),
-    cert: fs.readFileSync('client-cert.pem'),
-    rejectUnauthorized: true,
-    checkServerIdentity: function (host, cert) {
-    return undefined;
-    },
-
-    // Necessary only if the server uses the self-signed certificate
-    ca: [ fs.readFileSync('server-cert.pem') ]
-};
+var serverOpts;
+var connOpts;
 
 
 //first called from core
-exports.init = function(interPort,greetings,greetingsPort,heartBPort,hsPort,security){
+exports.init = function(interPort,greetings,greetingsPort,heartBPort,hsPort,security,sOpts,cOpts){
     console.log("Lan discovery initialized")
     contextServerPort = interPort;
     meetingsPort = greetingsPort;
@@ -66,6 +36,8 @@ exports.init = function(interPort,greetings,greetingsPort,heartBPort,hsPort,secu
     subnet = ip.subnet(addresses[0].addr, addresses[0].netmask);
     broadcastAddress = subnet.broadcastAddress;
     secure = security
+    serverOpts = sOpts
+    connOpts = cOpts
     initMeetingsServer();
     initHeartBeatServer();
     startCheckHeartBeat();
@@ -146,13 +118,19 @@ function initHeartBeatServer(){
         const server = tls.createServer(serverOpts, (socket) => {
         console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
             if(socket.authorized){
-                socket.on('data', function(data) {
+                /*socket.on('data', function(data) {
                     thingContext = context.thingContext.getInstance().getContext();
                     socket.write(JSON.stringify(thingContext));
                     socket.pipe(socket);
                     socket.end();
-                });
+                });*/
             }
+            socket.on('data', function(data) {
+                    thingContext = context.thingContext.getInstance().getContext();
+                    socket.write(JSON.stringify(thingContext));
+                    socket.pipe(socket);
+                    socket.end();
+            });
         });
         server.listen(hbPort, () => {
         console.log('Secure HeartBeat Server bound');

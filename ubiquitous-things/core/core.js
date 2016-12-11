@@ -20,11 +20,36 @@ var thingContext = context.thingContext.getInstance().getContext();
 var propObj = properties.getProperties();
 
 exports.init = function(){
-    console.log("my id is " + JSON.stringify(thingContext))    
-    contextServer.init(contextServerPort,propObj.secure);
-    jobsServer.init(jobsPort,propObj.secure);
+    console.log("my id is " + JSON.stringify(thingContext))  
+    var serverOpts;
+    var connOpts;  
+    if(propObj.secure){
+        const fs = require('fs');
+        serverOpts = {
+            key: fs.readFileSync('server-key.pem'),
+            cert: fs.readFileSync('server-cert.pem'),
+            // This is necessary only if using the client certificate authentication.
+            requestCert: true,
+            rejectUnauthorized: true,
+            // This is necessary only if the client uses the self-signed certificate.
+            ca: [ fs.readFileSync('client-cert.pem') ]
+        };
+        connOpts = {
+            // Necessary only if using the client certificate authentication
+            key: fs.readFileSync('client-key.pem'),
+            cert: fs.readFileSync('client-cert.pem'),
+            rejectUnauthorized: true,
+            checkServerIdentity: function (host, cert) {
+            return undefined;
+            },
+            // Necessary only if the server uses the self-signed certificate
+            ca: [ fs.readFileSync('server-cert.pem') ]
+        };
+    }
+    contextServer.init(contextServerPort,propObj.secure,serverOpts);
+    jobsServer.init(jobsPort,propObj.secure,serverOpts);
     if(propObj.lanMode){
-        lanDiscovery.init(contextServerPort,strGreeting,greetingsPort,hbPort,handSPort,propObj.secure);
+        lanDiscovery.init(contextServerPort,strGreeting,greetingsPort,hbPort,handSPort,propObj.secure,serverOpts,connOpts);
         lanDiscovery.sendGreetings();
     }
 }

@@ -4,25 +4,13 @@ const net = require("net");
 const context = require("./datamodel/thingContext.js")
 const things = require("./datamodel/knownThings.js");
 const tls = require('tls');
-const fs = require('fs');
 
 var thingContext;
 
 //interchanges server
 
-exports.init = function(interchangesPort,secure){
+exports.init = function(interchangesPort,secure,options){
     if(secure){
-        const options = {
-            key: fs.readFileSync('server-key.pem'),
-            cert: fs.readFileSync('server-cert.pem'),
-
-            // This is necessary only if using the client certificate authentication.
-            requestCert: true,
-
-            // This is necessary only if the client uses the self-signed certificate.
-            ca: [ fs.readFileSync('client-cert.pem') ]
-        };
-
         const server = tls.createServer(options, (socket) => {
         console.log('server connected',socket.authorized ? 'authorized' : 'unauthorized');
             if(socket.authorized){
